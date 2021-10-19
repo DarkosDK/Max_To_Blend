@@ -18,7 +18,7 @@ import codecs
 from .utility import settings
 from .utility import tools
 
-
+ 
 def getModelIniFile(file_path, file_name):
     folder_name = '_' + file_name + '_import'
     fPath = os.path.join(file_path, folder_name, (file_name + '.ini'))
@@ -128,9 +128,8 @@ class LIST_OT_PrintInfo(bpy.types.Operator):
             black_mat = dict()
             settings.fill_dict(black_mat, parser, 'black')
 
-
             print(black_mat)
-            print('asdaaaaaaaaaa')
+
             return{'FINISHED'}
         else:
             return{'CANCELLED'}
@@ -193,17 +192,71 @@ class LIST_OT_ImportModels(bpy.types.Operator):
     def execute(self, context):
         my_list = context.scene.my_list
         index = context.scene.list_index
+        item = my_list[index]
 
         model_name = my_list[index].name
         model_path = os.path.normpath(my_list[index].model_path)
 
-        # Import fbx
+        # Import fbx 
         fbx_file_path = tools.create_fbx_path(model_name, model_path)
-        print('TESTtt')
-        # print(fbx_file_path)
-        # bpy.ops.import_scene.fbx(filepath=str(fbx_file_path))
 
-        # print(os.path.normpath(my_list[index].model_path))
+        bpy.ops.import_scene.fbx(filepath=str(fbx_file_path), use_subsurf=True)
+
+
+        # Create dictionary with objects and collections
+        model_ini_file = getModelIniFile(item.model_path, item.name)
+        parser = settings.read_ini(model_ini_file)
+
+        models_collections = dict()
+
+        if ('Layers' in parser):
+            for key in parser['Layers']: 
+                models_collections[key] = parser['Layers'][key]
+
+        if models_collections:
+            # Create new collections list
+            new_collections = [models_collections[i] for i in models_collections.keys()]
+            new_collections = list(set(new_collections))
+            new_collections.sort()
+
+            # Create new Collections
+            for i in new_collections:
+                if bpy.context.view_layer.layer_collection.children.find(i) == -1:
+                    new_col = bpy.data.collections.new(i)
+                    bpy.context.scene.collection.children.link(new_col)
+
+            # Move objects to correct collection
+            unlink_collecctions = dict()
+            for ob in context.scene.objects:
+                ob_name = ob.name.lower()
+                if ob_name in models_collections.keys():
+                    collection_from = ob.users_collection[0]
+                    collection_to = bpy.data.collections[models_collections[ob_name]]
+
+                    try:
+                        collection_to.objects.link(ob)
+                        unlink_collecctions[ob] = collection_from
+                    except RuntimeError:
+                        pass
+                    
+
+            for ob in unlink_collecctions.keys():
+                coll_from = unlink_collecctions[ob]
+                coll_from.objects.unlink(ob)
+
+        # Close collections in outliner
+
+        override = bpy.context.copy()
+        for area in bpy.context.screen.areas:
+            if area.type == 'OUTLINER':
+                override['area'] = area
+                bpy.ops.wm.redraw_timer(type='DRAW_WIN', iterations=1)
+                bpy.ops.outliner.show_one_level(override, open=False)
+                area.tag_redraw()
+
+        # Deselect all objects
+        bpy.ops.object.select_all(action='DESELECT')
+
         return{'FINISHED'}
 
 # Panels
@@ -253,7 +306,7 @@ def unregister():
     bpy.utils.unregister_class(ListItem)
     # Unregister properties
     del bpy.types.Scene.list_index
-    del bpy.types.Scene.my_list
+    del bpy.types.Scene.my_list 
 
 if __name__ == "__main__":
     register()
