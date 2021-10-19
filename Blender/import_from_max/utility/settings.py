@@ -31,7 +31,6 @@ def fill_dict(dict_to_write, ini_file, section_name):
             dict_to_write[i] = section[i]
         else:
             new_dict = dict()
-            print(i)
             new_path = os.path.join(section_name, i)
             dict_to_write[i] = fill_dict(new_dict, ini_file, (section_name + '\\\\' + i))
     

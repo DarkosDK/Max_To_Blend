@@ -16,6 +16,7 @@ import os
 import configparser
 import codecs
 from .utility import settings
+from .utility import tools
 
 
 def getModelIniFile(file_path, file_name):
@@ -73,7 +74,7 @@ class MY_UL_List(bpy.types.UIList):
 class LIST_OT_NewItem(bpy.types.Operator):
     """Add a new item to the list."""
 
-    bl_idname = "my_list.new_item"
+    bl_idname = "m2b.new_item"
     bl_label = "Add a new item"
 
     def execute(self, context):
@@ -85,7 +86,7 @@ class LIST_OT_NewItem(bpy.types.Operator):
 class LIST_OT_DeleteItem(bpy.types.Operator):
     """Delete the selected item from the list."""
 
-    bl_idname = "my_list.delete_item"
+    bl_idname = "m2b.delete_item"
     bl_label = "Deletes an item"
 
     @classmethod
@@ -104,7 +105,7 @@ class LIST_OT_DeleteItem(bpy.types.Operator):
 class LIST_OT_PrintInfo(bpy.types.Operator):
     """Print some test info"""
 
-    bl_idname = "my_list.print_info"
+    bl_idname = "m2b.print_info"
     bl_label = "Print Info"
 
     @classmethod
@@ -129,6 +130,7 @@ class LIST_OT_PrintInfo(bpy.types.Operator):
 
 
             print(black_mat)
+            print('asdaaaaaaaaaa')
             return{'FINISHED'}
         else:
             return{'CANCELLED'}
@@ -159,7 +161,7 @@ class LIST_OT_PrintInfo(bpy.types.Operator):
 class LIST_OT_ListUpdate(bpy.types.Operator):
     """Update imported models"""
 
-    bl_idname = "my_list.update_list"
+    bl_idname = "m2b.update_list"
     bl_label = "Update"
 
     def execute(self, context):
@@ -181,7 +183,7 @@ class LIST_OT_ListUpdate(bpy.types.Operator):
 class LIST_OT_ImportModels(bpy.types.Operator):
     """Import models from FBX file"""
 
-    bl_idname = "my_list.import_model"
+    bl_idname = "m2b.import_model"
     bl_label = "Import model"
 
     @classmethod
@@ -192,7 +194,16 @@ class LIST_OT_ImportModels(bpy.types.Operator):
         my_list = context.scene.my_list
         index = context.scene.list_index
 
-        print(os.path.normpath(my_list[index].model_path))
+        model_name = my_list[index].name
+        model_path = os.path.normpath(my_list[index].model_path)
+
+        # Import fbx
+        fbx_file_path = tools.create_fbx_path(model_name, model_path)
+        print('TESTtt')
+        # print(fbx_file_path)
+        # bpy.ops.import_scene.fbx(filepath=str(fbx_file_path))
+
+        # print(os.path.normpath(my_list[index].model_path))
         return{'FINISHED'}
 
 # Panels
@@ -205,15 +216,15 @@ class DK_PT_Import_From_Max(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         col = layout.column(align=True)
-        col.operator('my_list.update_list', text='Update')
+        col.operator('m2b.update_list', text='Update')
         row = layout.row()
         row.template_list("MY_UL_List", "The_List", context.scene, "my_list", context.scene, "list_index")
 
         col.label(text='Models List')
 
         row = layout.row()
-        row.operator('my_list.import_model', text='Import Model')
-        row.operator('my_list.print_info', text='Info')
+        row.operator('m2b.import_model', text='Import Model')
+        row.operator('m2b.print_info', text='Info')
         # row.operator('my_list.new_item', text='New')
         # row.operator('my_list.delete_item', text='Delete')
         # row.operator('my_list.print_info', text='Info')
@@ -237,7 +248,7 @@ def register():
 
 def unregister():
     # Unregister classes
-    for blender_class in reversed(blender_classes):
+    for blender_class in blender_classes:
         bpy.utils.unregister_class(blender_class)
     bpy.utils.unregister_class(ListItem)
     # Unregister properties

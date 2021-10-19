@@ -15,6 +15,7 @@
 	scriptFolder = getFilenamePath scriptFilePath
 	iniInitPath = scriptFolder + "\\" + iniFileName
 	
+	
 	if not (doesFileExist mainInfo) do
 	(
 		makeDir iniFolder all:true
@@ -153,10 +154,7 @@
 		return newStruct
 	)
 	
-	ini = initIni()
-	cleanIni ini
-	
-	fn fillDescription elem elemName = 
+	fn fillDescription elem elemName iniPath= 
 	(
 		structToDescription = defineStructure elem
 		
@@ -165,61 +163,61 @@
 
 			if (defineStructure (getProperty structToDescription i)) != undefined  and i != #_main then
 			(
-				setINISetting ini (toLower elemName) (toLower (i as string)) (toLower ("inner_attachment: " + ((getProperty structToDescription i) as string)))
-				fillDescription (getProperty structToDescription i) (elemName + "\\\\" + (i as string))
+				setINISetting iniPath (toLower elemName) (toLower (i as string)) (toLower ("inner_attachment: " + ((getProperty structToDescription i) as string)))
+				fillDescription (getProperty structToDescription i) (elemName + "\\\\" + (i as string)) iniPath
 			)
 			else
 			(
 				if (i != #_main) and (i != #_name) do
 				(
-					setINISetting ini (toLower elemName) (toLower (i as string)) (toLower ((getProperty structToDescription i) as string))
+					setINISetting iniPath (toLower elemName) (toLower (i as string)) (toLower ((getProperty structToDescription i) as string))
 				)
 			)
 		)
 	)
 	
+	-- Create and clean (if already created) model ini file
+	ini = initIni()
+	cleanIni ini
+	
+	
+	-- Fill model ini File
+	
+	-- Materials
 	for i in scenematerials do
 	(
-		m = _VrayMtl (i)
-
 		setINISetting ini "Materials" i.name (classof i as string)
-		fillDescription i i.name
-		
-		/*
-		for j in (getPropNames m) do
-		(
-			setINISetting ini m.matName (j as string) ((getProperty m j) as string)
-			--format "%: %\n" j (getProperty m j)
-		)
-		*/
+		fillDescription i i.name ini
 	)
+	
+	-- Objects and layers
+	for j in geometry do
+	(
+		setINISetting ini "Objects" j.name j.material.name
+		setINISetting ini "Layers" j.name j.layer.name
+	)
+	
+	-- Export model
+	currentFbxVersion = FBXExporterGetParam "FileVersion"
+	exportVersion = #FBX201200
 	
 	modelName = getFilenameFile maxfilename
-	modelPath = maxfilepath + maxfilename
+	fbxModelPath = (getFilenamePath ini) + modelName + ".fbx"
 	
-	newPath = substituteString modelPath "\\" "\\\\"
-	
-	print newPath
-	
-	setINISetting mainInfo "Models" modelName maxfilepath
+	FBXExporterSetParam "FileVersion" exportVersion
+	exportResult = exportFile fbxModelPath #noPrompt using:FBXEXP
+	FBXExporterSetParam "FileVersion" currentFbxVersion
 	
 	
-	/*
-	for i in scenematerials do
+	-- Fill model name and path in main ini File
+	if exportResult do
 	(
-		setINISetting ini "Materials" i.name (classof i as string)
+		modelName = getFilenameFile maxfilename
+		modelPath = maxfilepath + maxfilename
 		
-		if (classof i == VrayMtl) do
-		(
-			global m2b_material = i
-			--allProps = GetPropNames i
-			for p in arrVrayMtlProps do
-			(	
-				-- remove # from name begin (for example: #Diffuse)
-				--prop = p as string
-				setINISetting ini i.name p ((execute ("m2b_material." + p)) as string)
-			)
-		)
+		newPath = substituteString modelPath "\\" "\\\\"
+		
+		setINISetting mainInfo "Models" modelName maxfilepath
 	)
-	*/
+	
 )
