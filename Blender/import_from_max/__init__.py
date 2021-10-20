@@ -229,10 +229,12 @@ class LIST_OT_ImportModels(bpy.types.Operator):
             unlink_collecctions = dict()
             for ob in context.scene.objects:
                 ob_name = ob.name.lower()
+                ind = ob_name.find(".")
+                if ind != -1:
+                    ob_name = ob_name[:ind]
                 if ob_name in models_collections.keys():
                     collection_from = ob.users_collection[0]
                     collection_to = bpy.data.collections[models_collections[ob_name]]
-
                     try:
                         collection_to.objects.link(ob)
                         unlink_collecctions[ob] = collection_from
