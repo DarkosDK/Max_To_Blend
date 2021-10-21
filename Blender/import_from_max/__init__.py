@@ -12,11 +12,14 @@ bl_info = {
 }
 
 import bpy
+from .utility import settings
+from .utility import tools
+from .utility import materials_tools
+from .utility.enums import carpaint_materials_types
 import os
 import configparser
 import codecs
-from .utility import settings
-from .utility import tools
+
 
  
 def getModelIniFile(file_path, file_name):
@@ -71,7 +74,7 @@ class MY_UL_List(bpy.types.UIList):
             layout.label(text="", icon = custom_icon)
 
 # Operators
-class LIST_OT_NewItem(bpy.types.Operator):
+class M2B_OT_NewItem(bpy.types.Operator):
     """Add a new item to the list."""
 
     bl_idname = "m2b.new_item"
@@ -83,7 +86,7 @@ class LIST_OT_NewItem(bpy.types.Operator):
 
         return{'FINISHED'}
 
-class LIST_OT_DeleteItem(bpy.types.Operator):
+class M2B_OT_DeleteItem(bpy.types.Operator):
     """Delete the selected item from the list."""
 
     bl_idname = "m2b.delete_item"
@@ -102,7 +105,7 @@ class LIST_OT_DeleteItem(bpy.types.Operator):
 
         return{'FINISHED'}
 
-class LIST_OT_PrintInfo(bpy.types.Operator):
+class M2B_OT_PrintInfo(bpy.types.Operator):
     """Print some test info"""
 
     bl_idname = "m2b.print_info"
@@ -128,11 +131,18 @@ class LIST_OT_PrintInfo(bpy.types.Operator):
             black_mat = dict()
             settings.fill_dict(black_mat, parser, 'black')
 
-            print(black_mat)
+        ob = context.active_object
+        materials_tools.clean_object_materials(ob)
 
-            return{'FINISHED'}
-        else:
-            return{'CANCELLED'}
+        mat = ob.active_material
+        mat.use_nodes = True
+
+        color = (0.3, 0.1, 0.8, 1.0)
+
+        materials_tools.create_carpaint_material_glossy(mat, color)
+        
+
+        return{'FINISHED'}
 
 
         # a = ''
@@ -157,7 +167,7 @@ class LIST_OT_PrintInfo(bpy.types.Operator):
 
         return{'FINISHED'}
 
-class LIST_OT_ListUpdate(bpy.types.Operator):
+class M2B_OT_ListUpdate(bpy.types.Operator):
     """Update imported models"""
 
     bl_idname = "m2b.update_list"
@@ -179,7 +189,7 @@ class LIST_OT_ListUpdate(bpy.types.Operator):
 
         return{'FINISHED'}
 
-class LIST_OT_ImportModels(bpy.types.Operator):
+class M2B_OT_ImportModels(bpy.types.Operator):
     """Import models from FBX file"""
 
     bl_idname = "m2b.import_model"
@@ -262,7 +272,7 @@ class LIST_OT_ImportModels(bpy.types.Operator):
         return{'FINISHED'}
 
 # Panels
-class DK_PT_Import_From_Max(bpy.types.Panel):
+class M2B_PT_Import_From_Max(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "Check"
@@ -284,14 +294,32 @@ class DK_PT_Import_From_Max(bpy.types.Panel):
         # row.operator('my_list.delete_item', text='Delete')
         # row.operator('my_list.print_info', text='Info')
 
+class M2B_PT_Tools(bpy.types.Panel):
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "Check"
+    bl_label = "Tools"
+    bl_parent_id = "M2B_PT_Import_From_Max"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.label(text='Create Carpaint Material')
+        row = layout.row(align=True)
+        row.label(text='Type:')
+        row.prop(context.scene, 'carpaint_type')
+        row = layout.row()
+        row.prop(context.scene, 'carpaint_color')
+        col =layout.column()
+
 blender_classes = [  
-    DK_PT_Import_From_Max,
+    M2B_PT_Import_From_Max,
     MY_UL_List,
-    LIST_OT_NewItem,
-    LIST_OT_DeleteItem,
-    LIST_OT_PrintInfo,
-    LIST_OT_ListUpdate,
-    LIST_OT_ImportModels,
+    M2B_OT_NewItem,
+    M2B_OT_DeleteItem,
+    M2B_OT_PrintInfo,
+    M2B_OT_ListUpdate,
+    M2B_OT_ImportModels,
+    M2B_PT_Tools,
 ]
 
 def register():
@@ -301,6 +329,20 @@ def register():
     for blender_class in blender_classes:
         bpy.utils.register_class(blender_class)
 
+    bpy.types.Scene.carpaint_color = bpy.props.FloatVectorProperty(
+        name='Color',
+        subtype='COLOR',
+        size=4,
+        default=(0.5, 0.5, 0.5, 1.0),
+        min=0.0,
+        max=1.0
+    )
+
+    bpy.types.Scene.carpaint_type = bpy.props.EnumProperty(
+        items=carpaint_materials_types,
+        name=''
+    )
+
 def unregister():
     # Unregister classes
     for blender_class in blender_classes:
@@ -309,6 +351,9 @@ def unregister():
     # Unregister properties
     del bpy.types.Scene.list_index
     del bpy.types.Scene.my_list 
+
+    del bpy.types.Scene.carpaint_color
+    del bpy.types.Scene.carpaint_type
 
 if __name__ == "__main__":
     register()
