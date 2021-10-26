@@ -325,6 +325,35 @@ class M2B_OT_CreateCarpaintMaterial(bpy.types.Operator):
 
         return{'FINISHED'}
 
+class M2B_OT_RemoveDuoliMaterials(bpy.types.Operator):
+    """Find Materials, whose names differ by number and replace by one material"""
+
+    bl_idname = "m2b.replace_dupli_materials"
+    bl_label = "Replace Materials Duplicates"
+
+    def execute(self, context):
+        main_materials = []
+        dupli_materials = []
+        for mat in bpy.data.materials:
+            ind = mat.name.find('.')
+            if ind != -1:
+                dupli_materials.append(mat)
+            else:
+                main_materials.append(mat)
+
+        for mat in dupli_materials:
+            main_name = mat.name[:(mat.name.find('.'))]
+            for i in main_materials:
+                if i.name == main_name:
+                    mat.user_remap(i)
+
+        # Delete unused materials
+        for i in dupli_materials:
+            if i.users == 0:
+                bpy.data.materials.remove(i)
+        
+        return{'FINISHED'}
+
 # Panels
 class M2B_PT_Import_From_Max(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
@@ -344,9 +373,7 @@ class M2B_PT_Import_From_Max(bpy.types.Panel):
         row = layout.row()
         row.operator('m2b.import_model', text='Import Model')
         row.operator('m2b.print_info', text='Info')
-        # row.operator('my_list.new_item', text='New')
-        # row.operator('my_list.delete_item', text='Delete')
-        # row.operator('my_list.print_info', text='Info')
+        
 
 class M2B_PT_Tools(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
@@ -357,6 +384,7 @@ class M2B_PT_Tools(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
+
         layout.label(text='Create Carpaint Material')
         box = layout.box()
         split = box.split(factor=0.1, align=False)
@@ -371,6 +399,10 @@ class M2B_PT_Tools(bpy.types.Panel):
         col_4.prop(context.scene, 'carpaint_color')
         box.operator('m2b.create_carpaint', text='Create Carpaint')
 
+        layout.label(text='Remove Materials Duplicates')
+        box = layout.box()
+        box.operator('m2b.replace_dupli_materials', text='Fix Materials')
+
 blender_classes = [  
     M2B_PT_Import_From_Max,
     MY_UL_List,
@@ -380,6 +412,7 @@ blender_classes = [
     M2B_OT_ListUpdate,
     M2B_OT_ImportModels,
     M2B_OT_CreateCarpaintMaterial,
+    M2B_OT_RemoveDuoliMaterials,
     M2B_PT_Tools,
 ]
 
