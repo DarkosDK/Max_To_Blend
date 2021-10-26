@@ -131,16 +131,8 @@ class M2B_OT_PrintInfo(bpy.types.Operator):
             black_mat = dict()
             settings.fill_dict(black_mat, parser, 'black')
 
-        ob = context.active_object
-        materials_tools.clean_object_materials(ob)
-
-        mat = ob.active_material
-        mat.use_nodes = True
-
-        color = (0.3, 0.1, 0.8, 1.0)
-
-        materials_tools.create_carpaint_material_glossy(mat, color)
-        
+            for key in black_mat.keys():
+                print('{} : {}'.format(key, black_mat[key]))
 
         return{'FINISHED'}
 
@@ -174,6 +166,8 @@ class M2B_OT_ListUpdate(bpy.types.Operator):
     bl_label = "Update"
 
     def execute(self, context):
+
+        print(context.scene.carpaint_type == 'Metal')
 
         my_list = context.scene.my_list
         parser = configparser.SafeConfigParser()
@@ -269,6 +263,66 @@ class M2B_OT_ImportModels(bpy.types.Operator):
         # Deselect all objects
         bpy.ops.object.select_all(action='DESELECT')
 
+        # CONVERT MATERIALS
+
+        # Get all materials deciption
+        materials_dict = settings.create_dict_all_materials(parser)
+
+        # Replace materials
+        for mat in bpy.data.materials:
+            mat_name = mat.name.lower()
+            ind = mat_name.find(".")
+            if ind != -1:
+                mat_name = mat_name[:ind]
+            
+            if mat_name in materials_dict.keys():
+                materials_tools.create_custom_mat(mat, materials_dict[mat_name])
+            
+
+        # for ob in context.scene.objects:
+        #     materials_count = len(ob.material_slots.values())
+
+        #     for i in range(0, materials_count):
+        #         ob.active_material_index = i
+        #         mat = ob.active_material
+
+        #         mat_name = mat.name.lower()
+        #         ind = mat_name.find(".")
+        #         if ind != -1:
+        #             mat_name = mat_name[:ind]
+
+        #         materials_tools.create_custom_mat(mat, materials_dict[mat_name])
+
+        return{'FINISHED'}
+
+class M2B_OT_CreateCarpaintMaterial(bpy.types.Operator):
+    """Create Carpaint Material"""
+
+    bl_idname = "m2b.create_carpaint"
+    bl_label = "Create Carpaint Material"
+
+    @classmethod
+    def poll(cls, context):
+        if context.area.type == 'VIEW_3D':
+            ob = context.active_object
+            return ob is not None and ob.mode == 'OBJECT'
+
+    def execute(self, context):
+        ob = context.active_object
+        materials_tools.clean_object_materials(ob)
+
+        mat = ob.active_material
+        mat.use_nodes = True
+
+        color = context.scene.carpaint_color
+
+        is_metal = context.scene.carpaint_type == 'Metal'
+
+        if is_metal:
+            materials_tools.create_carpaint_material_metal(mat, color)
+        else:
+            materials_tools.create_carpaint_material_glossy(mat, color)
+
         return{'FINISHED'}
 
 # Panels
@@ -304,12 +358,18 @@ class M2B_PT_Tools(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         layout.label(text='Create Carpaint Material')
-        row = layout.row(align=True)
-        row.label(text='Type:')
-        row.prop(context.scene, 'carpaint_type')
-        row = layout.row()
-        row.prop(context.scene, 'carpaint_color')
-        col =layout.column()
+        box = layout.box()
+        split = box.split(factor=0.1, align=False)
+        col_1 = split.column()
+        col_2 = split.column()
+        split_2 = col_2.split(factor=0.22)
+        col_3 = split_2.column()
+        col_4 = split_2.column()
+        col_3.label(text='Type:')
+        col_4.prop(context.scene, 'carpaint_type')
+        col_3.label(text='Color:')
+        col_4.prop(context.scene, 'carpaint_color')
+        box.operator('m2b.create_carpaint', text='Create Carpaint')
 
 blender_classes = [  
     M2B_PT_Import_From_Max,
@@ -319,6 +379,7 @@ blender_classes = [
     M2B_OT_PrintInfo,
     M2B_OT_ListUpdate,
     M2B_OT_ImportModels,
+    M2B_OT_CreateCarpaintMaterial,
     M2B_PT_Tools,
 ]
 
@@ -330,7 +391,7 @@ def register():
         bpy.utils.register_class(blender_class)
 
     bpy.types.Scene.carpaint_color = bpy.props.FloatVectorProperty(
-        name='Color',
+        name='',
         subtype='COLOR',
         size=4,
         default=(0.5, 0.5, 0.5, 1.0),

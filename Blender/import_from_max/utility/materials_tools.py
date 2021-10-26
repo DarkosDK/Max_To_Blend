@@ -8,7 +8,6 @@ def find_bsdf(mat):
 
     return n_bsdf
 
-
 # Delete all nodes in material and create setup with Principled BSDF and Output nodes
 def clean_material_nodes(mat):
     mat.use_nodes = True
@@ -133,7 +132,16 @@ def create_carpaint_material_glossy(mat, color):
 
     n_bsdf = find_bsdf(mat)
 
-    n_bsdf.inputs[7].default_value = 0.9
+    n_bsdf.inputs[4].default_value = 0.0
+    n_bsdf.inputs[7].default_value = 0.35
+        
 
+def create_custom_mat(mat, description: dict):
+    clean_material_nodes(mat)
+    link = mat.node_tree.links.new
 
+    n_bsdf = find_bsdf(mat)
 
+    if 'diffuse_color' in description.keys():
+        print(description['diffuse_color'])
+    

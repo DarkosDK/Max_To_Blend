@@ -36,6 +36,14 @@ def fill_dict(dict_to_write, ini_file, section_name):
     
     return dict_to_write
 
+def create_dict_all_materials(ini_file):
+    global_dict = dict()
+    if ('Materials' in ini_file):
+        for key in ini_file['Materials']: 
+            mat_dict = dict()
+            fill_dict(mat_dict, ini_file, key)
+            global_dict[key] = mat_dict
+    return global_dict
 
 def collect_material_settings(ini_path):
     material_settings = dict()
