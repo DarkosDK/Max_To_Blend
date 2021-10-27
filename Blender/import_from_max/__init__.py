@@ -120,6 +120,26 @@ class M2B_OT_PrintInfo(bpy.types.Operator):
         index = context.scene.list_index
         item = my_list[index]
 
+        model_name = item.name
+        model_path = item.model_path
+
+        tools.remove_model_from_list(model_name, model_path)
+
+        parser = configparser.SafeConfigParser()
+        with codecs.open(ini, 'r', encoding='utf-16') as f:
+            parser.readfp(f)
+
+        my_list.clear()
+        if ('Models' in parser):
+            for key in parser['Models']: 
+                item = context.scene.my_list.add()
+                item.name = key
+                item.model_path = parser['Models'][key]
+
+        # Update list -> create a function
+
+
+        '''
         model_ini_file = getModelIniFile(item.model_path, item.name)
 
         parser = settings.read_ini(model_ini_file)
@@ -133,7 +153,7 @@ class M2B_OT_PrintInfo(bpy.types.Operator):
 
             for key in black_mat.keys():
                 print('{} : {}'.format(key, black_mat[key]))
-
+        '''
         return{'FINISHED'}
 
 
@@ -166,8 +186,6 @@ class M2B_OT_ListUpdate(bpy.types.Operator):
     bl_label = "Update"
 
     def execute(self, context):
-
-        print(context.scene.carpaint_type == 'Metal')
 
         my_list = context.scene.my_list
         parser = configparser.SafeConfigParser()
@@ -265,6 +283,9 @@ class M2B_OT_ImportModels(bpy.types.Operator):
 
         # CONVERT MATERIALS
 
+        # Fix materials: remove duplicates
+        tools.fix_materials()
+
         # Get all materials deciption
         materials_dict = settings.create_dict_all_materials(parser)
 
@@ -325,32 +346,14 @@ class M2B_OT_CreateCarpaintMaterial(bpy.types.Operator):
 
         return{'FINISHED'}
 
-class M2B_OT_RemoveDuoliMaterials(bpy.types.Operator):
+class M2B_OT_RemoveDupliMaterials(bpy.types.Operator):
     """Find Materials, whose names differ by number and replace by one material"""
 
     bl_idname = "m2b.replace_dupli_materials"
     bl_label = "Replace Materials Duplicates"
 
     def execute(self, context):
-        main_materials = []
-        dupli_materials = []
-        for mat in bpy.data.materials:
-            ind = mat.name.find('.')
-            if ind != -1:
-                dupli_materials.append(mat)
-            else:
-                main_materials.append(mat)
-
-        for mat in dupli_materials:
-            main_name = mat.name[:(mat.name.find('.'))]
-            for i in main_materials:
-                if i.name == main_name:
-                    mat.user_remap(i)
-
-        # Delete unused materials
-        for i in dupli_materials:
-            if i.users == 0:
-                bpy.data.materials.remove(i)
+        tools.fix_materials()
         
         return{'FINISHED'}
 
@@ -412,7 +415,7 @@ blender_classes = [
     M2B_OT_ListUpdate,
     M2B_OT_ImportModels,
     M2B_OT_CreateCarpaintMaterial,
-    M2B_OT_RemoveDuoliMaterials,
+    M2B_OT_RemoveDupliMaterials,
     M2B_PT_Tools,
 ]
 
