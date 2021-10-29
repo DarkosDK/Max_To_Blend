@@ -73,6 +73,8 @@ class MY_UL_List(bpy.types.UIList):
             layout.alignment = 'CENTER'
             layout.label(text="", icon = custom_icon)
 
+    
+
 # Operators
 class M2B_OT_NewItem(bpy.types.Operator):
     """Add a new item to the list."""
@@ -120,40 +122,19 @@ class M2B_OT_PrintInfo(bpy.types.Operator):
         index = context.scene.list_index
         item = my_list[index]
 
-        model_name = item.name
-        model_path = item.model_path
 
-        tools.remove_model_from_list(model_name, model_path)
-
-        parser = configparser.SafeConfigParser()
-        with codecs.open(ini, 'r', encoding='utf-16') as f:
-            parser.readfp(f)
-
-        my_list.clear()
-        if ('Models' in parser):
-            for key in parser['Models']: 
-                item = context.scene.my_list.add()
-                item.name = key
-                item.model_path = parser['Models'][key]
-
-        # Update list -> create a function
-
-
-        '''
         model_ini_file = getModelIniFile(item.model_path, item.name)
 
         parser = settings.read_ini(model_ini_file)
 
-        if ('Materials' in parser):
-            for key in parser['Materials']: 
-                print(key)
+        materials_dict = settings.create_dict_all_materials(parser)
 
-            black_mat = dict()
-            settings.fill_dict(black_mat, parser, 'black')
+        # Replace materials
+        for mat in bpy.data.materials:
+            mat_name = mat.name.lower()
+            if mat_name in materials_dict.keys():
+                materials_tools.create_custom_mat(mat, materials_dict[mat_name])
 
-            for key in black_mat.keys():
-                print('{} : {}'.format(key, black_mat[key]))
-        '''
         return{'FINISHED'}
 
 
@@ -198,6 +179,7 @@ class M2B_OT_ListUpdate(bpy.types.Operator):
                 item = context.scene.my_list.add()
                 item.name = key
                 item.model_path = parser['Models'][key]
+
 
         return{'FINISHED'}
 
@@ -290,14 +272,24 @@ class M2B_OT_ImportModels(bpy.types.Operator):
         materials_dict = settings.create_dict_all_materials(parser)
 
         # Replace materials
-        for mat in bpy.data.materials:
-            mat_name = mat.name.lower()
-            ind = mat_name.find(".")
-            if ind != -1:
-                mat_name = mat_name[:ind]
+        # for mat in bpy.data.materials:
+        #     mat_name = mat.name.lower()
+        #     ind = mat_name.find(".")
+        #     if ind != -1:
+        #         mat_name = mat_name[:ind]
             
-            if mat_name in materials_dict.keys():
-                materials_tools.create_custom_mat(mat, materials_dict[mat_name])
+        #     if mat_name in materials_dict.keys():
+        #         materials_tools.create_custom_mat(mat, materials_dict[mat_name])
+
+        # Convert Materials
+
+
+
+        # Clean List -> ADD IN THE END
+         
+
+        # tools.remove_model_from_list(model_name, model_path)
+        # bpy.ops.m2b.update_list()
             
 
         # for ob in context.scene.objects:

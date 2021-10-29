@@ -8,6 +8,114 @@ def find_bsdf(mat):
 
     return n_bsdf
 
+def find_node_position(node, input_ind):
+    deltaY = 0
+    if node.type == 'BSDF_PRINCIPLED':
+        deltaY = 100
+    input_deltaY = 20 * input_ind
+    deltaY += input_deltaY
+    deltaX = 300
+
+    return (node.location.x - deltaX, node.location.y - deltaY)
+
+def create_mix_node(mat, node, input_ind: int):
+
+    # Find new node position 
+    n_mix_location = find_node_position(node, input_ind)
+
+    # Create node
+    n_mix = mat.node_tree.nodes.new('ShaderNodeMixRGB')
+    n_mix.location = n_mix_location
+    mat.node_tree.links.new(n_mix.outputs[0], node.inputs[input_ind])
+
+    return n_mix
+
+
+def set_texture(mat, node, input_ind: int, texture_path: str, isSRGB: bool, mult, init_color=(1.0, 1.0, 1.0, 1.0)):
+    link = mat.node_tree.links.new
+
+    node_to_link = node
+    index_to_link = input_ind
+
+    if mult != 1.0:
+        n_mix = create_mix_node(mat, node, 0)
+        n_mix.inputs[1].default_value = init_color
+        n_mix.inputs[0].default_value = mult
+        node_to_link = n_mix
+        index_to_link = 2
+
+    # Find new node position 
+    n_texture_map_location = find_node_position(node_to_link, index_to_link)
+    
+    # Texture node
+    n_texture_map = mat.node_tree.nodes.new('ShaderNodeTexImage')
+    n_texture_map.location = n_texture_map_location
+    new_img = bpy.data.images.load(filepath = texture_path)
+    n_texture_map.image = new_img
+    # For test
+    if isSRGB:
+        new_img.colorspace_settings.name = 'sRGB'
+    else:
+        new_img.colorspace_settings.name = 'Non-Color'
+    link(n_texture_map.outputs[0], node_to_link.inputs[index_to_link])
+
+    # Mapping node
+    n_mapping = mat.node_tree.nodes.new('ShaderNodeMapping')
+    n_mapping.location = (n_texture_map.location.x - 220, n_texture_map.location.y)
+    link(n_mapping.outputs[0], n_texture_map.inputs[0])
+
+    # Text_coords node
+    n_texture_coord = mat.node_tree.nodes.new('ShaderNodeTexCoord')
+    n_texture_coord.location = (n_mapping.location.x - 220, n_mapping.location.y)
+    link(n_texture_coord.outputs[2], n_mapping.inputs[0])
+
+def create_map(mat, node, input_ind: int):
+    pass
+
+class BSDF():
+    def __init__(self, material) -> None:
+        self.mat = material
+        self.bsdf_node = find_bsdf(self.mat)
+        self.diff_color = None
+
+    def set_diffuse(self, color):
+        self.bsdf_node.inputs[0].default_value = color
+        self.diff_color = color
+    
+    def set_diffuse_texture(self, text_path, mult):
+        set_texture(self.mat, self.bsdf_node, 0, text_path, True, mult, self.diff_color)
+        # if mult == 1.0:
+        #     set_texture(self.mat, self.bsdf_node, 0, text_path, True)
+        # else:
+        #     n_mix = create_mix_node(self.mat, self.bsdf_node, 0)
+        #     if self.diff_color is not None:
+        #         n_mix.inputs[1].default_value = self.diff_color
+        #     n_mix.inputs[0].default_value = mult
+        #     set_texture(self.mat, n_mix, 2, text_path, True)
+
+    def set_spec_texture(self, text_path):
+        pass
+        # set_texture(self.mat, self.bsdf_node, 5, text_path, False)
+
+    def set_specular(self, value):
+        self.bsdf_node.inputs[5].default_value = value
+
+    def set_roughness(self, value):
+        self.bsdf_node.inputs[7].default_value = value
+
+    def set_roughness_texture(self, text_path):
+
+        # Invert node
+        n_invert_position = find_node_position(self.bsdf_node, 7)
+
+        n_invert = self.mat.node_tree.nodes.new('ShaderNodeInvert')
+        n_invert.location = n_invert_position
+        self.mat.node_tree.links.new(n_invert.outputs[0], self.bsdf_node.inputs[7])
+
+        # set_texture(self.mat, n_invert, 0, text_path, False)
+
+
+
 # Delete all nodes in material and create setup with Principled BSDF and Output nodes
 def clean_material_nodes(mat):
     mat.use_nodes = True
@@ -134,14 +242,55 @@ def create_carpaint_material_glossy(mat, color):
 
     n_bsdf.inputs[4].default_value = 0.0
     n_bsdf.inputs[7].default_value = 0.35
-        
+
+def parse_color(str_color: str):
+    # Remove brackets
+    str_color = str_color[1:len(str_color) - 1]
+    # Return Color value from string description
+    elements = str_color.rsplit(' ')
+    color = (float(elements[1])/255, float(elements[2])/255, float(elements[3])/255, 1)
+    return color
 
 def create_custom_mat(mat, description: dict):
     clean_material_nodes(mat)
     link = mat.node_tree.links.new
 
-    n_bsdf = find_bsdf(mat)
+    bsdf = BSDF(mat)
 
+    # DIFFUSE
     if 'diffuse_color' in description.keys():
-        print(description['diffuse_color'])
+        bsdf.set_diffuse(parse_color(description['diffuse_color']))
+
+        if 'texmap_diffuse' in description.keys():
+            if description['texmap_diffuse'] != 'undefined' and type(description['texmap_diffuse']) == dict:
+                if description['texmap_diffuse']['_type'] == 'bitmaptexture':
+                    # Mix texture with color
+                    if 'texmap_diffuse_multiplier' in description.keys():
+                        diff_mult = (float(description['texmap_diffuse_multiplier']))/100.0
+                        bsdf.set_diffuse_texture(description['texmap_diffuse']['texture'], diff_mult)               
+
+
+    # Reflection
+    if 'reflection_color' in description.keys():
+        spec_color = parse_color(description['reflection_color'])
+        spec_value = max([spec_color[0], spec_color[1], spec_color[2]])
+        bsdf.set_specular(spec_value)
+
+    if 'texmap_reflection' in description.keys():
+        if description['texmap_reflection'] != 'undefined' and type(description['texmap_reflection']) == dict:
+            if description['texmap_reflection']['_type'] == 'bitmaptexture':
+                bsdf.set_spec_texture(description['texmap_reflection']['texture'])
+
+    # Roughness
+    if 'reflection_glossiness' in description.keys():
+        glossy_value = float(description['reflection_glossiness'])
+        bsdf.set_roughness(1 - glossy_value)
+
+    if 'texmap_reflectionglossiness' in description.keys():
+        if description['texmap_reflectionglossiness'] != 'undefined' and type(description['texmap_reflectionglossiness']) == dict:
+            if description['texmap_reflectionglossiness']['_type'] == 'bitmaptexture':
+                bsdf.set_roughness_texture(description['texmap_reflectionglossiness']['texture'])
+
+
+        
     
