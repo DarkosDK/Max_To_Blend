@@ -197,6 +197,10 @@
 		setINISetting ini "Layers" j.name j.layer.name
 	)
 	
+	-- Settings
+	-- 01 Is Gamma Correction on
+	setINISetting ini "Settings" "Gamma" IDisplayGamma.colorCorrectionMode -- gamma or none
+	
 	-- Export model
 	currentFbxVersion = FBXExporterGetParam "FileVersion"
 	exportVersion = #FBX201200
