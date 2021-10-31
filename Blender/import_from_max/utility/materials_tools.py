@@ -251,6 +251,13 @@ def parse_color(str_color: str):
     color = (float(elements[1])/255, float(elements[2])/255, float(elements[3])/255, 1)
     return color
 
+def calculate_average_color(str_color_1: str, str_color_2: str):
+    col_1 = parse_color(str_color_1)
+    col_2 = parse_color(str_color_2)
+
+    return ((col_1[0] + col_2[0])/2, (col_1[1] + col_2[1])/2, (col_1[2] + col_2[2])/2, (col_1[3] + col_2[3])/2)
+
+
 def create_custom_mat(mat, description: dict):
     clean_material_nodes(mat)
     link = mat.node_tree.links.new
