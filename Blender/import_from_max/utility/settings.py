@@ -11,6 +11,11 @@ iniPath = os.path.join(userPath, iniFolder)
 # Main INI File
 ini = os.path.join(iniPath, iniFileName)
 
+used_materials = [
+    'VRayMtl',
+]
+
+
 def initialize():
     if not os.path.exists(iniPath):
         os.mkdir(iniPath)
@@ -40,9 +45,10 @@ def create_dict_all_materials(ini_file):
     global_dict = dict()
     if ('Materials' in ini_file):
         for key in ini_file['Materials']: 
-            mat_dict = dict()
-            fill_dict(mat_dict, ini_file, key)
-            global_dict[key] = mat_dict
+            if ini_file['Materials'][key] in used_materials:
+                mat_dict = dict()
+                fill_dict(mat_dict, ini_file, key)
+                global_dict[key] = mat_dict
     return global_dict
 
 def collect_material_settings(ini_path):

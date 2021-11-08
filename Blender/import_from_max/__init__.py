@@ -127,13 +127,21 @@ class M2B_OT_PrintInfo(bpy.types.Operator):
 
         parser = settings.read_ini(model_ini_file)
 
+        is_gamma = True
+        if ('Settings' in parser):
+            if 'Gamma' in parser['Settings']:
+                if parser['Settings']['Gamma'] == 'gamma':
+                    is_gamma = False
+                    
+
         materials_dict = settings.create_dict_all_materials(parser)
 
         # Replace materials
         for mat in bpy.data.materials:
             mat_name = mat.name.lower()
             if mat_name in materials_dict.keys():
-                materials_tools.create_custom_mat(mat, materials_dict[mat_name])
+                materials_tools.VRayMtl(mat, materials_dict[mat_name], is_gamma)
+                # materials_tools.create_custom_mat(mat, materials_dict[mat_name], is_gamma)
 
         return{'FINISHED'}
 
