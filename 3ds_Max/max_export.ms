@@ -158,22 +158,27 @@
 	(
 		structToDescription = defineStructure elem
 		
-		for i in (getPropNames structToDescription) do
+		if structToDescription != undefined do
 		(
+			for i in (getPropNames structToDescription) do
+			(
 
-			if (defineStructure (getProperty structToDescription i)) != undefined  and i != #_main then
-			(
-				setINISetting iniPath (toLower elemName) (toLower (i as string)) (toLower ("inner_attachment: " + ((getProperty structToDescription i) as string)))
-				fillDescription (getProperty structToDescription i) (elemName + "\\\\" + (i as string)) iniPath
-			)
-			else
-			(
-				if (i != #_main) and (i != #_name) do
+				if (defineStructure (getProperty structToDescription i)) != undefined  and i != #_main then
 				(
-					setINISetting iniPath (toLower elemName) (toLower (i as string)) (toLower ((getProperty structToDescription i) as string))
+					setINISetting iniPath (toLower elemName) (toLower (i as string)) (toLower ("inner_attachment: " + ((getProperty structToDescription i) as string)))
+					fillDescription (getProperty structToDescription i) (elemName + "\\\\" + (i as string)) iniPath
+				)
+				else
+				(
+					if (i != #_main) and (i != #_name) do
+					(
+						setINISetting iniPath (toLower elemName) (toLower (i as string)) (toLower ((getProperty structToDescription i) as string))
+					)
 				)
 			)
 		)
+		
+		
 	)
 	
 	-- Create and clean (if already created) model ini file
@@ -219,9 +224,9 @@
 		modelName = getFilenameFile maxfilename
 		modelPath = maxfilepath + maxfilename
 		
-		newPath = substituteString modelPath "\\" "\\\\"
+		newPath = substituteString maxfilepath "\\" "\\\\"
 		
-		setINISetting mainInfo "Models" modelName maxfilepath
+		setINISetting mainInfo "Models" modelName newPath--maxfilepath
 	)
 	
 )

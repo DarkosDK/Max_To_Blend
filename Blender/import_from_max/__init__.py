@@ -140,7 +140,9 @@ class M2B_OT_PrintInfo(bpy.types.Operator):
         for mat in bpy.data.materials:
             mat_name = mat.name.lower()
             if mat_name in materials_dict.keys():
-                materials_tools.VRayMtl(mat, materials_dict[mat_name], is_gamma)
+                materials_tools.clean_material_nodes(mat, False)
+                print(materials_dict[mat_name]['_type'])
+                # materials_tools.VRayMtl(mat, materials_dict[mat_name], is_gamma)
                 # materials_tools.create_custom_mat(mat, materials_dict[mat_name], is_gamma)
 
         return{'FINISHED'}
@@ -178,7 +180,7 @@ class M2B_OT_ListUpdate(bpy.types.Operator):
 
         my_list = context.scene.my_list
         parser = configparser.SafeConfigParser()
-        with codecs.open(ini, 'r', encoding='utf-16') as f:
+        with codecs.open(ini, 'r', encoding='utf-8') as f:
             parser.readfp(f)
 
         my_list.clear()

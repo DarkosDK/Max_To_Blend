@@ -23,7 +23,7 @@ def initialize():
 
 def read_ini(ini_path):
     parser = configparser.SafeConfigParser()
-    with codecs.open(ini_path, 'r', encoding='utf-16') as f:
+    with codecs.open(ini_path, 'r', encoding='utf-8') as f:
         parser.readfp(f)
 
     return parser

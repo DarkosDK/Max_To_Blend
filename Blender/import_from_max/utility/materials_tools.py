@@ -12,6 +12,15 @@ def find_bsdf(mat):
 
     return n_bsdf
 
+def find_out(mat):
+    n_out = None
+    for n in mat.node_tree.nodes:
+        if n.type == 'OUTPUT_MATERIAL':
+            n_out = n
+            break
+
+    return n_out
+
 def find_node_position(node, input_ind):
     deltaY = 0
     if node.type == 'BSDF_PRINCIPLED':
@@ -95,7 +104,9 @@ def import_vraymtl_node(mat):
             n_out = n
             break
 
-    mat.node_tree.links.new(new_group_node.outputs[0], n_out.inputs[0])
+    # mat.node_tree.links.new(new_group_node.outputs[0], n_out.inputs[0])
+
+    return new_group_node
     
 
 class BSDF():
@@ -145,10 +156,10 @@ class BSDF():
         # set_texture(self.mat, n_invert, 0, text_path, False)
 
 class VRayMtl():
-    def __init__(self, material, description: dict, is_gamma) -> None:
+    def __init__(self, material, description: dict, is_gamma, node_to_connect) -> None:
         self.mat = material
         clean_material_nodes(self.mat, False)
-        import_vraymtl_node(self.mat)
+        self.node = import_vraymtl_node(self.mat)
         # self.bsdf_node = import_vraymtl_node(self.mat)
         self.description = description
         self.is_gamma = is_gamma
@@ -247,6 +258,9 @@ class VRayMtl():
 
     def init_glossy_refract_mult(self):
         return self.__init_mult('texmap_refractionglossiness_multiplier')
+
+def create_material(material_description: dict, node_to_connect):
+    pass
 
 # Delete all nodes in material and create setup with Principled BSDF and Output nodes
 def clean_material_nodes(mat, is_create_principal):
