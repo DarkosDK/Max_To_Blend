@@ -140,10 +140,12 @@ class M2B_OT_PrintInfo(bpy.types.Operator):
         for mat in bpy.data.materials:
             mat_name = mat.name.lower()
             if mat_name in materials_dict.keys():
-                materials_tools.clean_material_nodes(mat, False)
-                print(materials_dict[mat_name]['_type'])
-                # materials_tools.VRayMtl(mat, materials_dict[mat_name], is_gamma)
-                # materials_tools.create_custom_mat(mat, materials_dict[mat_name], is_gamma)
+                if materials_dict[mat_name]:
+                    # materials_tools.clean_material_nodes(mat, False)
+                    # print(materials_dict[mat_name]['_type'])
+
+                    # MAIN PART
+                    materials_tools.create_material(mat, materials_dict[mat_name], is_gamma)
 
         return{'FINISHED'}
 
@@ -279,7 +281,7 @@ class M2B_OT_ImportModels(bpy.types.Operator):
         tools.fix_materials()
 
         # Get all materials deciption
-        materials_dict = settings.create_dict_all_materials(parser)
+        # materials_dict = settings.create_dict_all_materials(parser)
 
         # Replace materials
         # for mat in bpy.data.materials:

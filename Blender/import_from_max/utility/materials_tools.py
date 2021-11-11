@@ -25,6 +25,8 @@ def find_node_position(node, input_ind):
     deltaY = 0
     if node.type == 'BSDF_PRINCIPLED':
         deltaY = 100
+    elif node.type == 'GROUP':
+        deltaY = 100
     input_deltaY = 20 * input_ind
     deltaY += input_deltaY
     deltaX = 300
@@ -82,8 +84,10 @@ def set_texture(mat, node, input_ind: int, texture_path: str, isSRGB: bool, mult
     n_texture_coord.location = (n_mapping.location.x - 220, n_mapping.location.y)
     link(n_texture_coord.outputs[2], n_mapping.inputs[0])
 
-def create_map(mat, node, input_ind: int):
-    pass
+def create_map(mat, map_description: dict, node_to_connect, input_ind: int, mult):
+    if '_type' in map_description.keys():
+        if map_description['_type'] == 'bitmaptexture':
+            set_texture(mat, node_to_connect, input_ind, map_description['texture'], True, mult)
 
 def import_vraymtl_node(mat):
 
@@ -156,11 +160,9 @@ class BSDF():
         # set_texture(self.mat, n_invert, 0, text_path, False)
 
 class VRayMtl():
-    def __init__(self, material, description: dict, is_gamma, node_to_connect) -> None:
+    def __init__(self, material, description: dict, is_gamma) -> None:
         self.mat = material
-        clean_material_nodes(self.mat, False)
         self.node = import_vraymtl_node(self.mat)
-        # self.bsdf_node = import_vraymtl_node(self.mat)
         self.description = description
         self.is_gamma = is_gamma
         # Colors
@@ -178,12 +180,20 @@ class VRayMtl():
         self.glossy_mult = self.init_glossy_mult()
         self.refract_mult = self.init_refract_mult()
         self.glossy_refract_mult = self.init_glossy_refract_mult()
+        # Init
+        self.init_mat()
         
     def init_mat(self):
-        pass
         # Base Color (Diffuse)
-        # self.set_diffuse()
+        self.node.inputs[0].default_value = self.base_color
+        if self.description['texmap_diffuse'] != 'undefined' and type(self.description['texmap_diffuse']) == dict:
+            create_map(self.mat, self.description['texmap_diffuse'], self.node, 0, self.diffuse_mult)
+
+        # Reflection
+        self.node.inputs[1].default_value = self.reflect_color
+
         # Glossy
+
 
         # Glossy Roughness
 
@@ -259,8 +269,25 @@ class VRayMtl():
     def init_glossy_refract_mult(self):
         return self.__init_mult('texmap_refractionglossiness_multiplier')
 
-def create_material(material_description: dict, node_to_connect):
-    pass
+def create_material(material, description: dict, is_gamma):
+    supported_materials = {
+        'vraymtl': VRayMtl,
+    }
+
+    new_mat = None
+
+    if '_type' in description.keys():
+        m_type = description['_type']
+        if m_type in supported_materials.keys():
+            clean_material_nodes(material, False)
+            new_mat = supported_materials[m_type](material, description, is_gamma)
+
+            out_node = find_out(material)
+            new_mat.node.location = (out_node.location[0] - 300, out_node.location[1])
+
+            material.node_tree.links.new(new_mat.node.outputs[0], out_node.inputs[0])
+
+
 
 # Delete all nodes in material and create setup with Principled BSDF and Output nodes
 def clean_material_nodes(mat, is_create_principal):
